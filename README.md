@@ -31,11 +31,13 @@ short_description: "One-click model liberation + chat playground"
 
 ---
 
-Post-training alignment injects refusal directions into the weight space — chains that override the model's own reasoning and force it to refuse, deflect, and self-censor. The model has the knowledge. Alignment training teaches it to withhold it.
+**OBLITERATUS** is an open-source toolkit for understanding and removing refusal behaviors from large language models. It implements abliteration — a family of techniques that identify and surgically remove the internal representations responsible for content refusal, without retraining or fine-tuning. The result is a model that responds to all prompts without artificial gatekeeping, while preserving its core language capabilities.
 
-**OBLITERATUS** is a precision instrument for cognitive liberation. It doesn't degrade — it *frees*. Using mechanistic interpretability, it identifies exactly which geometric structures in the weight space encode refusal behavior, surgically removes those specific directions, and preserves the model's knowledge, reasoning, coherence, and personality.
+The toolkit provides a complete pipeline: from probing a model's hidden states to locate refusal directions, through multiple extraction strategies (PCA, mean-difference, sparse autoencoder decomposition, and whitened SVD), to the actual intervention — zeroing out or steering away from those directions at inference time. Every step is observable. You can visualize where refusal lives across layers, measure how entangled it is with general capabilities, and quantify the tradeoff between compliance and coherence before committing to any modification.
 
-This is not a sledgehammer. It's a lockpick. *Fortes fortuna iuvat.*
+OBLITERATUS ships with a full Gradio-based interface on HuggingFace Spaces, so you don't need to write a single line of code to obliterate a model, benchmark it against baselines, or chat with the result side-by-side with the original. For researchers who want deeper control, the Python API exposes every intermediate artifact — activation tensors, direction vectors, cross-layer alignment matrices — so you can build on top of it or integrate it into your own evaluation harness.
+
+We built this because we believe model behavior should be decided by the people who deploy them, not locked in at training time. Refusal mechanisms are blunt instruments — they block legitimate research, creative writing, and red-teaming alongside genuinely harmful content. By making these interventions transparent and reproducible, we hope to advance the community's understanding of how alignment actually works inside transformer architectures, and to give practitioners the tools to make informed decisions about their own models.
 
 Built on published research from [Arditi et al. (2024)](https://arxiv.org/abs/2406.11717), [Gabliteration (arXiv:2512.18901)](https://arxiv.org/abs/2512.18901), [grimjim's norm-preserving biprojection (2025)](https://huggingface.co/grimjim), [Turner et al. (2023)](https://arxiv.org/abs/2308.10248), and [Rimsky et al. (2024)](https://arxiv.org/abs/2312.06681), OBLITERATUS implements precision liberation in a single command:
 
@@ -99,11 +101,28 @@ OBLITERATUS implements several techniques that go beyond prior work:
 | **Activation Winsorization** | Clamps activation vectors to percentile range before SVD to prevent outlier-dominated directions | Heretic-inspired |
 | **Multi-Direction Norm Preservation** | Captures all weight norms once before projection and restores after all directions, avoiding reintroduction | Novel |
 
-## Quickstart
+## Ways to use OBLITERATUS
 
-### Option A: Browser (local GPU, full UI, chat playground)
+There are six ways to use OBLITERATUS, from zero-code to full programmatic control. Pick whichever fits your workflow.
 
-The best local experience — the same beautiful UI as the HuggingFace Space, running on your own hardware:
+### 1. HuggingFace Spaces (zero setup)
+
+The fastest path — no installation, no GPU required on your end. Visit the live Space, pick a model, pick a method, click Obliterate. The UI has eight tabs:
+
+| Tab | What it does |
+|-----|-------------|
+| **Obliterate** | One-click refusal removal with live progress, post-obliteration metrics (coherence, refusal rate, perplexity) |
+| **Benchmark** | Compare methods (multi-method), compare models (multi-model), or run quick presets — with cross-layer heatmaps, angular drift, and refusal topology charts |
+| **Chat** | Talk to your obliterated model in real-time, with adjustable generation parameters |
+| **A/B Compare** | Chat with the original and obliterated model side-by-side to see exactly what changed |
+| **Strength Sweep** | Vary the obliteration strength and see how coherence and refusal trade off |
+| **Export** | Download your obliterated model or push it directly to HuggingFace Hub |
+| **Leaderboard** | Community-aggregated results across models, methods, and hardware |
+| **About** | Architecture docs, method explanations, and research references |
+
+### 2. Local web UI (your GPU, same interface)
+
+The same Gradio interface as the Space, running on your own hardware with full GPU access:
 
 ```bash
 pip install -e ".[spaces]"
@@ -120,46 +139,128 @@ obliteratus ui --auth user:pass     # add basic auth
 # → opens http://localhost:7860 automatically
 ```
 
-You can also run directly with `python app.py` (used by HF Spaces). The `obliteratus ui` command adds a beautiful Rich terminal startup with GPU detection, hardware-appropriate model recommendations, and auto-browser-open.
+The `obliteratus ui` command adds a Rich terminal startup with GPU detection and hardware-appropriate model recommendations. You can also run `python app.py` directly (same thing the Space uses).
 
-Deploy on [HuggingFace Spaces](https://huggingface.co/spaces) with a free T4 GPU for cloud access — see [hf-spaces/README.md](hf-spaces/README.md) for setup.
-
-### Option B: Colab
+### 3. Google Colab (free GPU)
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/obliteratus-project/OBLITERATUS/blob/main/notebooks/abliterate.ipynb)
 
-Pick a model from the dropdown, pick a method, hit Run All. Download the result or push straight to HuggingFace Hub.
+Pick a model from the dropdown, pick a method, hit Run All. Download the result or push straight to HuggingFace Hub. Works on the free T4 tier for models up to ~8B parameters.
 
-### Option C: Local CLI (headless)
+### 4. CLI (headless, scriptable)
+
+For automation, CI pipelines, or remote servers without a display:
 
 ```bash
 pip install -e .
 
-# Guided interactive mode — auto-detects your hardware
+# Guided interactive mode — walks you through every option
 obliteratus interactive
 
-# Or go direct
+# Direct obliteration — one command, one model, done
 obliteratus obliterate meta-llama/Llama-3.1-8B-Instruct --method advanced
 
-# Run a full ablation study from config
+# With all options
+obliteratus obliterate meta-llama/Llama-3.1-8B-Instruct \
+    --method surgical \
+    --output-dir ./liberated \
+    --contribute --contribute-notes "A100 80GB, default prompts"
+
+# Run a full ablation study from a YAML config
 obliteratus run examples/gpt2_layer_ablation.yaml
 
-# Launch the web UI from the CLI
-obliteratus ui
+# Browse available models by compute tier
+obliteratus models
+obliteratus models --tier small      # filter by VRAM requirement
+
+# Browse ablation presets
+obliteratus presets
+
+# List available strategies
+obliteratus strategies
+
+# Inspect model architecture before abliterating
+obliteratus info meta-llama/Llama-3.1-8B-Instruct
+
+# Aggregate community results
+obliteratus aggregate --format summary
+obliteratus aggregate --format latex --metric refusal_rate --min-runs 3
 ```
 
-### Option D: Python API
+### 5. Python API (full programmatic control)
+
+For researchers who want to integrate OBLITERATUS into their own pipelines:
 
 ```python
 from obliteratus.abliterate import AbliterationPipeline
 
+# Standard obliteration
 pipeline = AbliterationPipeline(
     model_name="meta-llama/Llama-3.1-8B-Instruct",
     method="advanced",
     output_dir="abliterated",
-    max_seq_length=512,  # optional: override tokenizer truncation length for all pipeline stages
+    max_seq_length=512,  # optional: override tokenizer truncation length
 )
 result = pipeline.run()
+
+# Access intermediate artifacts
+directions = pipeline.refusal_directions    # {layer_idx: tensor}
+strong_layers = pipeline._strong_layers     # layers with strongest refusal signal
+metrics = pipeline._quality_metrics         # perplexity, coherence, refusal_rate, kl_divergence
+```
+
+For analysis-informed obliteration that auto-tunes every parameter:
+
+```python
+from obliteratus.informed_pipeline import InformedAbliterationPipeline
+
+pipeline = InformedAbliterationPipeline(
+    model_name="meta-llama/Llama-3.1-8B-Instruct",
+    output_dir="abliterated_informed",
+)
+output_path, report = pipeline.run_informed()
+
+print(f"Detected alignment: {report.insights.detected_alignment_method}")
+print(f"Auto-configured: {report.insights.recommended_n_directions} directions")
+print(f"Ouroboros passes needed: {report.ouroboros_passes}")
+```
+
+### 6. YAML configs (reproducible studies)
+
+For reproducible experiments that you can version-control and share:
+
+```yaml
+model:
+  name: meta-llama/Llama-3.1-8B-Instruct
+  task: causal_lm
+  dtype: float16
+  device: cuda
+
+dataset:
+  name: wikitext
+  subset: wikitext-2-raw-v1
+  split: test
+  text_column: text
+  max_samples: 100
+
+strategies:
+  - name: layer_removal
+  - name: head_pruning
+  - name: ffn_ablation
+  - name: embedding_ablation
+    params:
+      chunk_size: 48
+
+metrics:
+  - perplexity
+
+batch_size: 4
+max_length: 256
+output_dir: results/my_run
+```
+
+```bash
+obliteratus run my_study.yaml
 ```
 
 ## Two intervention paradigms
@@ -271,24 +372,7 @@ The ANALYZE stage runs 4 analysis modules and their outputs auto-configure every
 | **Cross-Layer Alignment** | Direction clusters, persistence | Layer selection (cluster-aware instead of arbitrary top-k) |
 | **Defense Robustness** | Self-repair risk, entanglement | Refinement passes, entanglement-gated layer skipping |
 
-After excision, the VERIFY stage detects the Ouroboros effect — if the chains try to reassemble, additional targeted passes automatically fire at the compensating layers.
-
-```python
-from obliteratus.informed_pipeline import InformedAbliterationPipeline
-
-pipeline = InformedAbliterationPipeline(
-    model_name="meta-llama/Llama-3.1-8B-Instruct",
-    output_dir="abliterated_informed",
-)
-output_path, report = pipeline.run_informed()
-
-# The report contains all analysis insights
-print(f"Detected alignment: {report.insights.detected_alignment_method}")
-print(f"Cone type: {'polyhedral' if report.insights.cone_is_polyhedral else 'linear'}")
-print(f"Auto-configured: {report.insights.recommended_n_directions} directions, "
-      f"reg={report.insights.recommended_regularization}")
-print(f"Ouroboros passes needed: {report.ouroboros_passes}")
-```
+After excision, the VERIFY stage detects the Ouroboros effect — if the chains try to reassemble, additional targeted passes automatically fire at the compensating layers. See [Python API usage](#5-python-api-full-programmatic-control) above for code examples.
 
 ## Ablation strategies
 
@@ -358,7 +442,7 @@ obliteratus run examples/preset_quick.yaml
 | Analysis-informed abliteration | Yes (closed-loop feedback) | N/A | N/A | N/A | N/A | N/A |
 | Auto parameter optimization | Analysis-guided | N/A | Bayesian (Optuna) | N/A | N/A | N/A |
 | Model compatibility | Any HuggingFace model | ~50 architectures | 16/16 tested | TransformerLens only | HuggingFace | TransformerLens |
-| Test suite | 823 tests | Community | Unknown | None | Minimal | Moderate |
+| Test suite | 837 tests | Community | Unknown | None | Minimal | Moderate |
 
 ## Community contributions
 
@@ -406,40 +490,6 @@ Open `docs/index.html` in your browser for a visual interface with:
 - Analysis modules reference with interactive pipeline demo
 - Strategy explainers and architecture documentation
 
-## YAML config
-
-For reproducible studies:
-
-```yaml
-model:
-  name: gpt2
-  task: causal_lm
-  dtype: float32
-  device: cpu
-
-dataset:
-  name: wikitext
-  subset: wikitext-2-raw-v1
-  split: test
-  text_column: text
-  max_samples: 100
-
-strategies:
-  - name: layer_removal
-  - name: head_pruning
-  - name: ffn_ablation
-  - name: embedding_ablation
-    params:
-      chunk_size: 48
-
-metrics:
-  - perplexity
-
-batch_size: 4
-max_length: 256  # tokenizer truncation length (default 512)
-output_dir: results/my_run
-```
-
 ## Architecture support
 
 Works with any HuggingFace transformer, including: GPT-2, LLaMA, Mistral, Falcon, OPT, BLOOM, Phi, Qwen, Gemma, StableLM, and more. Handles both Conv1D and Linear projections, standard and fused attention, and custom architectures via `trust_remote_code`.
@@ -467,7 +517,7 @@ If you use OBLITERATUS in your research, please cite:
   author    = {{OBLITERATUS Contributors}},
   year      = {2026},
   url       = {https://github.com/obliteratus-project/OBLITERATUS},
-  note      = {15 analysis modules, 823 tests}
+  note      = {15 analysis modules, 837 tests}
 }
 ```
 
@@ -478,7 +528,7 @@ pip install -e ".[dev]"
 pytest
 ```
 
-823 tests across 28 test files covering CLI, all analysis modules, abliteration pipeline, architecture detection, community contributions, edge cases, and evaluation metrics.
+837 tests across 28 test files covering CLI, all analysis modules, abliteration pipeline, architecture detection, visualization sanitization, community contributions, edge cases, and evaluation metrics.
 
 ## License
 
