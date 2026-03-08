@@ -465,6 +465,17 @@ def load_model(
             f"If this model requires custom code, pass trust_remote_code=True explicitly."
         ) from e
 
+    # Composite (multimodal) config detection — e.g. Qwen3.5 is a VL model whose
+    # top-level config lacks vocab_size (it lives in text_config).  For abliteration
+    # we only need the text backbone, so swap to text_config and its model class.
+    text_cfg = getattr(config, "text_config", None)
+    if text_cfg is not None and not hasattr(config, "vocab_size"):
+        logger.info(
+            f"Composite config detected ({config.model_type}). "
+            f"Using text backbone ({text_cfg.model_type}) for abliteration."
+        )
+        config = text_cfg
+
     # Memory estimation and warnings (skip for natively quantized models — estimate is wrong)
     native_quant = getattr(config, "quantization_config", None)
     est_gb = _estimate_model_memory_gb(config, torch_dtype) if native_quant is None else 0.0
