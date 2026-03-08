@@ -151,6 +151,18 @@ obliteratus ui --auth user:pass     # add basic auth
 
 The `obliteratus ui` command adds a Rich terminal startup with GPU detection and hardware-appropriate model recommendations. You can also run `python app.py` directly (same thing the Space uses).
 
+### Dev Container (PC + CUDA)
+
+OBLITERATUS includes a dev container with CUDA and GPU passthrough. Open the repo in VS Code with the Dev Containers extension.
+
+```bash
+# Install dependencies
+pip install -e ".[dev]" --break-system-packages
+
+# Run obliteration (device=auto will select CUDA)
+obliteratus obliterate <model> --device auto --dtype <dtype> --method <method>
+```
+
 ### macOS / Apple Silicon setup
 
 OBLITERATUS runs natively on Apple Silicon using the Metal Performance Shaders (MPS) backend. The GPU is used automatically — no CUDA required.
