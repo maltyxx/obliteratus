@@ -182,6 +182,14 @@ pip install -e .
 obliteratus obliterate <model> --device auto --dtype <dtype> --method <method>
 ```
 
+### Converting to MLX (Apple Silicon inference)
+
+After abliteration, convert the model to MLX format for fast inference on Apple Silicon (`mlx-lm` is already installed via `requirements-apple.txt`):
+
+```bash
+mlx_lm.convert --hf-path abliterated/<model> --mlx-path abliterated/<model>-mlx
+```
+
 ### 3. Google Colab (free GPU)
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/elder-plinius/OBLITERATUS/blob/main/notebooks/abliterate.ipynb)
